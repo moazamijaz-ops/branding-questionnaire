@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brand Personality Questionnaire — Design Garage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F6F3;--surface:#fff;--border:#E5E3DE;--border-focus:#1A1A1A;
+  --text:#1A1A1A;--muted:#6E6E6E;--subtle:#9E9E9E;
+  --accent-bg:#F0EFE9;--green:#2E7D32;--green-bg:#E8F5E9;
+  --hh:52px;--sw:248px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
+
+/* TOP BAR */
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--hh);background:#1A1A1A;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:200}
+.tb-left{display:flex;align-items:center;gap:20px}
+.tb-brand{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;opacity:.5}
+.prog-wrap{display:flex;align-items:center;gap:12px}
+.prog-label{font-size:13px;font-weight:600;white-space:nowrap}
+.prog-track{width:160px;height:3px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:#fff;border-radius:2px;transition:width .4s ease;width:0}
+.save-badge{font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.12);opacity:0;transition:opacity .3s}
+.save-badge.show{opacity:1}
+
+/* LAYOUT */
+.layout{display:flex;padding-top:var(--hh);min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:var(--sw);min-width:var(--sw);background:var(--surface);border-right:1px solid var(--border);position:fixed;top:var(--hh);left:0;bottom:0;overflow-y:auto;padding:20px 0}
+.sb-head{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--subtle);padding:0 20px 14px}
+.nav-link{display:flex;align-items:center;gap:8px;padding:9px 20px;color:var(--muted);text-decoration:none;font-size:13px;border-left:2px solid transparent;transition:all .15s;cursor:pointer}
+.nav-link:hover{color:var(--text);background:var(--accent-bg)}
+.nav-link.active{color:var(--text);font-weight:500;border-left-color:var(--text);background:var(--accent-bg)}
+.nav-num{font-size:11px;color:var(--subtle);flex-shrink:0}
+
+/* MAIN */
+.main{flex:1;margin-left:var(--sw);padding:52px 64px 80px;max-width:calc(var(--sw) + 760px)}
+.pg-head{margin-bottom:48px}
+.pg-head h1{font-size:26px;font-weight:600;margin-bottom:6px}
+.pg-head p{font-size:14px;color:var(--muted)}
+
+/* BRAND FIELD */
+.brand-field{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:52px}
+.brand-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.brand-input{width:100%;border:none;background:transparent;font-family:inherit;font-size:20px;font-weight:500;color:var(--text);outline:none}
+.brand-input::placeholder{color:var(--border)}
+
+/* SECTIONS */
+.section{margin-bottom:72px;scroll-margin-top:calc(var(--hh) + 20px)}
+.sec-head{border-bottom:1.5px solid var(--text);padding-bottom:14px;margin-bottom:36px}
+.sec-tag{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.sec-title{font-size:20px;font-weight:600;margin-bottom:4px}
+.sec-desc{font-size:13px;color:var(--muted);font-style:italic}
+
+/* QUESTIONS */
+.question{margin-bottom:40px}
+.q-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.q-num{font-size:11px;font-weight:600;background:var(--accent-bg);color:var(--muted);padding:2px 8px;border-radius:4px;white-space:nowrap;margin-top:1px;flex-shrink:0;transition:all .2s}
+.question.answered .q-num{background:var(--green-bg);color:var(--green)}
+.q-text{font-size:15px;font-weight:500;line-height:1.5}
+.q-hint{font-size:12px;color:var(--muted);font-style:italic;margin-top:5px;margin-bottom:10px}
+
+/* TEXTAREA */
+textarea{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:14px;line-height:1.6;color:var(--text);background:var(--surface);resize:vertical;min-height:110px;transition:border-color .15s}
+textarea:focus{outline:none;border-color:var(--border-focus)}
+
+/* SCALE */
+.scale-ends{display:flex;justify-content:space-between;margin-bottom:8px}
+.scale-end{font-size:12px;color:var(--muted);max-width:48%}
+.scale-end.r{text-align:right}
+.scale-btns{display:flex;gap:6px}
+.scale-btn{flex:1;height:44px;border:1px solid var(--border);background:var(--surface);border-radius:6px;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;transition:all .15s;color:var(--muted)}
+.scale-btn:hover{border-color:var(--text);color:var(--text);background:var(--accent-bg)}
+.scale-btn.sel{background:var(--text);color:#fff;border-color:var(--text)}
+
+/* CHIPS (checkboxes) */
+.chip-group{display:flex;flex-wrap:wrap;gap:8px}
+.chip input[type=checkbox]{display:none}
+.chip-lbl{padding:7px 14px;border:1px solid var(--border);border-radius:24px;font-size:13px;font-family:inherit;cursor:pointer;transition:all .15s;background:var(--surface);user-select:none;color:var(--text)}
+.chip-lbl:hover{border-color:var(--text);background:var(--accent-bg)}
+.chip input[type=checkbox]:checked+.chip-lbl{background:var(--text);color:#fff;border-color:var(--text)}
+.chip-limit{font-size:12px;color:var(--muted);margin-top:8px}
+
+/* MULTI-PART */
+.mp{display:flex;flex-direction:column;gap:14px}
+.mp-row label{display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+
+/* EXPORT BOX */
+.export-box{margin-top:16px;padding:28px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.export-box h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.export-box p{font-size:13px;color:var(--muted);margin-bottom:16px}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:6px;font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;border:1px solid transparent;transition:all .15s}
+.btn-dark{background:var(--text);color:#fff;border-color:var(--text)}
+.btn-dark:hover{opacity:.8}
+.btn-outline{background:transparent;color:var(--text);border-color:var(--border)}
+.btn-outline:hover{background:var(--accent-bg);border-color:var(--text)}
+.btn-danger{background:transparent;color:#c0392b;border-color:#f5c6cb}
+.btn-danger:hover{background:#fdf0ef}
+
+@media(max-width:900px){
+  .sidebar{display:none}
+  .main{margin-left:0;padding:32px 24px 60px}
+  .tb-brand{display:none}
+  .prog-track{width:100px}
+}
+@media(max-width:480px){
+  .scale-btn{height:36px;font-size:12px}
+  .scale-ends{font-size:11px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-left">
+    <span class="tb-brand">Design Garage</span>
+    <div class="prog-wrap">
+      <span class="prog-label" id="prog-label">0/54 answered</span>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+    </div>
+  </div>
+  <span class="save-badge" id="save-badge">✓ Saved</span>
+</div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="main">
+    <div class="pg-head">
+      <h1>Brand Personality Questionnaire</h1>
+      <p>Design Garage — Brand Positioning &amp; Personality Discovery</p>
+    </div>
+
+    <div class="brand-field">
+      <div class="brand-lbl">Brand Name</div>
+      <input class="brand-input" type="text" id="q-brand_name" placeholder="Enter the brand name…">
+    </div>
+
+    <div id="sections-root"></div>
+
+    <div class="export-box">
+      <h3>Export Responses</h3>
+      <p>All answers are stored locally in your browser's IndexedDB database. Download a copy anytime.</p>
+      <div class="btn-row">
+        <button class="btn btn-dark" onclick="exportJSON()">↓ Export JSON</button>
+        <button class="btn btn-outline" onclick="exportText()">↓ Export Text</button>
+        <button class="btn btn-danger" onclick="clearAll()">Clear All Responses</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ─── DATA ─────────────────────────────────────────────────────────── */
+const SECTIONS = [
+  { id:'s1', num:'01', title:'Foundation & Purpose',        desc:'Understanding the core reason this company exists beyond making money.', qs:['q1','q2','q3','q4','q5','q6'] },
+  { id:'s2', num:'02', title:'Market Position',             desc:'Where the company sits in its competitive landscape.',                    qs:['q7','q8','q9','q10','q11','q12','q13'] },
+  { id:'s3', num:'03', title:'Audience & Relationships',    desc:'Who the company serves and how it relates to them.',                      qs:['q14','q15','q16','q17','q18','q19'] },
+  { id:'s4', num:'04', title:'Brand Personality',           desc:'If this company were a person, who would it be?',                         qs:['q20','q21','q22','q23','q24','q25','q26','q27','q28'] },
+  { id:'s5', num:'05', title:'Voice & Communication',       desc:'How the brand speaks and what it says.',                                  qs:['q29','q30','q31','q32','q33','q34','q35'] },
+  { id:'s6', num:'06', title:'Visual Identity Direction',   desc:'The aesthetic and sensory world of the brand.',                           qs:['q36','q37','q38','q39','q40','q41'] },
+  { id:'s7', num:'07', title:'Culture & Character',         desc:'The internal life and lived values of the company.',                      qs:['q42','q43','q44','q45','q46','q47'] },
+  { id:'s8', num:'08', title:'Ambition & Evolution',        desc:'Where the brand is going and what it wants to become.',                   qs:['q48','q49','q50','q51','q52','q53'] },
+];
+
+const Q = {
+  q1:  { n:'Q1',  t:'ta', label:"What is the company's origin story? Why was it founded and what problem was it originally created to solve?" },
+  q2:  { n:'Q2',  t:'ta', label:"What is the company's mission statement — or if none exists, how would you describe its core purpose in one sentence?" },
+  q3:  { n:'Q3',  t:'ta', label:"What is the company's vision? Where does it see itself in 5–10 years?" },
+  q4:  { n:'Q4',  t:'ta', label:"What would the world look like if this company achieved everything it set out to do?" },
+  q5:  { n:'Q5',  t:'ta', label:"What are the company's core values? List them and briefly describe what each means in practice." },
+  q6:  { n:'Q6',  t:'cb', label:"What industry or category does the company primarily operate in?", hint:"Select all that apply",
+         opts:["Design & creative","Technology","Manufacturing","Consulting","Retail","Automotive","Architecture","Fashion","Education","Health & wellness","Finance","Media","Other"] },
+  q7:  { n:'Q7',  t:'ta', label:"Who are the 3–5 most direct competitors? What do they stand for?" },
+  q8:  { n:'Q8',  t:'ta', label:"What does this company do better than any competitor? What is its genuine, defensible differentiator?" },
+  q9:  { n:'Q9',  t:'ta', label:"What is the company's unique value proposition — the thing only it can say?" },
+  q10: { n:'Q10', t:'sc', label:"Where does the brand sit on the price/quality spectrum?", l:"1 — Accessible / value", r:"7 — Premium / luxury" },
+  q11: { n:'Q11', t:'sc', label:"How niche vs. broad is the company's focus?", l:"1 — Highly specialised", r:"7 — Broad & generalist" },
+  q12: { n:'Q12', t:'ta', label:"What is the company's positioning statement? (Target audience + frame of reference + point of difference + reason to believe)" },
+  q13: { n:'Q13', t:'ta', label:"What common industry assumptions or conventions does this brand challenge or reject?" },
+  q14: { n:'Q14', t:'ta', label:"Describe the primary target customer in detail — demographics, profession, lifestyle, values, aspirations." },
+  q15: { n:'Q15', t:'ta', label:"What is the customer's biggest pain point that this company solves? What do they feel before and after engaging with the brand?" },
+  q16: { n:'Q16', t:'ta', label:"Are there secondary audiences (e.g. partners, press, investors, employees)? How do they differ from the primary audience?" },
+  q17: { n:'Q17', t:'sc', label:"What is the desired emotional relationship with the customer?", l:"1 — Transactional & efficient", r:"7 — Deep & personal" },
+  q18: { n:'Q18', t:'ta', label:"If the ideal customer were to describe this brand to a friend, what would they say — in their own words?" },
+  q19: { n:'Q19', t:'cb', label:"What emotions should the brand evoke in its audience?", hint:"Select all that apply",
+         opts:["Trust","Excitement","Calm","Inspiration","Pride","Belonging","Aspiration","Safety","Delight","Confidence","Curiosity","Rebellion"] },
+  q20: { n:'Q20', t:'ta', label:"If this brand were a person at a dinner party, how would they behave? What would they talk about, and how would others describe them afterwards?" },
+  q21: { n:'Q21', t:'cb', label:"Choose up to 5 personality traits that best describe this brand:", hint:"Select up to 5", max:5,
+         opts:["Bold","Warm","Witty","Authoritative","Playful","Sophisticated","Rebellious","Nurturing","Precise","Adventurous","Calm","Energetic","Intellectual","Approachable","Provocative","Humble","Ambitious","Reliable"] },
+  q22: { n:'Q22', t:'ta', label:"What 3 adjectives should this brand NEVER be described as? What is out of character?" },
+  q23: { n:'Q23', t:'ta', label:"Name a real-world brand (in any industry) whose personality this company admires. What specifically resonates?" },
+  q24: { n:'Q24', t:'ta', label:"Name a real-world brand whose personality this company wants to avoid at all costs. Why?" },
+  q25: { n:'Q25', t:'ta', label:"If the brand were a famous person — real or fictional — who would it be and why?" },
+  q26: { n:'Q26', t:'sc', label:"Where does the brand sit on this personality spectrum?", l:"1 — Serious & formal", r:"7 — Playful & casual" },
+  q27: { n:'Q27', t:'sc', label:"Energy level:", l:"1 — Calm & measured", r:"7 — Dynamic & energetic" },
+  q28: { n:'Q28', t:'sc', label:"Attitude:", l:"1 — Humble & understated", r:"7 — Bold & assertive" },
+  q29: { n:'Q29', t:'ta', label:"How does the brand speak? Describe its tone of voice in 3–5 words." },
+  q30: { n:'Q30', t:'mp', label:"Provide an example of a sentence or headline that sounds perfectly 'on-brand'. Then rewrite it two wrong ways to show what off-brand sounds like.",
+         parts:[{key:'on_brand',label:"On-brand example"},{key:'off_brand_1',label:"Off-brand version 1"},{key:'off_brand_2',label:"Off-brand version 2"}] },
+  q31: { n:'Q31', t:'sc', label:"Vocabulary level:", l:"1 — Plain & everyday", r:"7 — Expert & technical" },
+  q32: { n:'Q32', t:'sc', label:"Communication style:", l:"1 — Direct & concise", r:"7 — Narrative & expansive" },
+  q33: { n:'Q33', t:'cb', label:"Which communication channels are most important for this brand?", hint:"Select all that apply",
+         opts:["Social media","Long-form editorial","Video","Podcast & audio","Exhibitions & events","Direct mail","Email","Word of mouth","Press & PR","Packaging","In-person experience"] },
+  q34: { n:'Q34', t:'ta', label:"What topics is this brand genuinely knowledgeable and authoritative about? What subjects should it avoid?" },
+  q35: { n:'Q35', t:'ta', label:"Does the brand use humour? If so, what kind — and where is the line?" },
+  q36: { n:'Q36', t:'ta', label:'Describe the visual world of this brand in 5 words or less.', hint:'"Raw, industrial, precise" or "Warm, handcrafted, organic"' },
+  q37: { n:'Q37', t:'cb', label:"What colour mood best fits the brand?", hint:"Select all that apply",
+         opts:["Black & white / monochrome","Warm earthy tones","Cool blues & grays","Vibrant & saturated","Pastel & soft","Dark & moody","Metallic & refined","Natural & organic"] },
+  q38: { n:'Q38', t:'ta', label:"Collect 3–5 visual references (other brands, artworks, spaces, materials) that resonate with the desired aesthetic. Describe what specifically appeals about each." },
+  q39: { n:'Q39', t:'sc', label:"Visual complexity:", l:"1 — Minimal & stripped back", r:"7 — Rich & layered" },
+  q40: { n:'Q40', t:'sc', label:"Visual feel:", l:"1 — Digital & contemporary", r:"7 — Analogue & crafted" },
+  q41: { n:'Q41', t:'ta', label:"Are there any visual elements, styles, or aesthetics that must be avoided? Any brand baggage to steer away from?" },
+  q42: { n:'Q42', t:'ta', label:"How does the company treat its employees? What is the internal culture like?" },
+  q43: { n:'Q43', t:'ta', label:"What does the company believe about its craft or industry that others don't? What is its philosophical stance?" },
+  q44: { n:'Q44', t:'ta', label:"What would the company never compromise on, even under commercial pressure?" },
+  q45: { n:'Q45', t:'ta', label:"Does the brand have a point of view on social, environmental, or political issues? How public is that stance?" },
+  q46: { n:'Q46', t:'cb', label:"What role does the brand play in culture?", hint:"Select all that apply",
+         opts:["Leader & pioneer","Challenger & disruptor","Craftsman & expert","Enabler & partner","Educator & guide","Entertainer","Community builder","Quiet authority"] },
+  q47: { n:'Q47', t:'ta', label:"What stories does the company tell about itself? What moments, achievements, or beliefs define its identity?" },
+  q48: { n:'Q48', t:'ta', label:"What is the gap between how the brand is perceived today and how it wants to be perceived? What needs to change?" },
+  q49: { n:'Q49', t:'ta', label:"Are there new markets, audiences, or categories the brand wants to move into? How should the personality flex to support that?" },
+  q50: { n:'Q50', t:'ta', label:"What does success look like for this brand identity project? How will you know it worked?" },
+  q51: { n:'Q51', t:'ta', label:"What is the single most important thing the brand must be famous for — the one thing it needs to own in the minds of its audience?" },
+  q52: { n:'Q52', t:'ta', label:"Is there anything about the brand's current identity that absolutely must be preserved, even as it evolves?" },
+  q53: { n:'Q53', t:'ta', label:"Any other context, nuance, or information that would help define this brand's personality?" },
+};
+
+const TOTAL = 54; // brand_name + q1..q53
+
+/* ─── STATE ─────────────────────────────────────────────────────────── */
+let resp = {};
+let saveTimer = null;
+let saveQueue = new Set();
+
+/* ─── INDEXEDDB ─────────────────────────────────────────────────────── */
+const DB_NAME = 'dg_brand_q', DB_VER = 1, STORE = 'responses';
+let db;
+
+function openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, DB_VER);
+    r.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE, {keyPath:'id'});
+    };
+    r.onsuccess = e => { db = e.target.result; res(); };
+    r.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbPut(id, value) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).put({id, value, ts: Date.now()});
+    tx.oncomplete = res;
+    tx.onerror = e => rej(e.target.error);
+  });
+}
+
+function dbGetAll() {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE,'readonly');
+    const r = tx.objectStore(STORE).getAll();
+    r.onsuccess = () => res(r.result);
+    r.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbClear() {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).clear();
+    tx.oncomplete = res;
+    tx.onerror = e => rej(e.target.error);
+  });
+}
+
+/* ─── HELPERS ────────────────────────────────────────────────────────── */
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.max(110, el.scrollHeight) + 'px';
+}
+
+/* ─── RENDER ─────────────────────────────────────────────────────────── */
+function buildSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.innerHTML = '<div class="sb-head">Sections</div>' +
+    SECTIONS.map((s,i) =>
+      `<a class="nav-link${i===0?' active':''}" href="#${s.id}">
+        <span class="nav-num">${s.num}</span>${s.title}
+      </a>`
+    ).join('');
+
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const href = '#' + e.target.id;
+        document.querySelectorAll('.nav-link').forEach(a =>
+          a.classList.toggle('active', a.getAttribute('href') === href)
+        );
+      }
+    });
+  }, {rootMargin:'-15% 0px -75% 0px'});
+  SECTIONS.forEach(s => { const el = document.getElementById(s.id); if(el) obs.observe(el); });
+}
+
+function buildSections() {
+  const root = document.getElementById('sections-root');
+  root.innerHTML = SECTIONS.map(s => `
+    <section class="section" id="${s.id}">
+      <div class="sec-head">
+        <div class="sec-tag">Section ${s.num}</div>
+        <div class="sec-title">${s.title}</div>
+        <div class="sec-desc">${s.desc}</div>
+      </div>
+      ${s.qs.map(qid => buildQuestion(qid)).join('')}
+    </section>
+  `).join('');
+}
+
+function buildQuestion(qid) {
+  const q = Q[qid];
+  if (!q) return '';
+  const answered = isAnswered(qid);
+  let inner = '';
+
+  if (q.t === 'ta') {
+    inner = `<textarea data-qid="${qid}" placeholder="Your answer…">${esc(resp[qid]||'')}</textarea>`;
+  } else if (q.t === 'sc') {
+    const v = resp[qid];
+    inner = `<div>
+      <div class="scale-ends">
+        <span class="scale-end">${q.l}</span>
+        <span class="scale-end r">${q.r}</span>
+      </div>
+      <div class="scale-btns">
+        ${[1,2,3,4,5,6,7].map(i =>
+          `<button class="scale-btn${v==i?' sel':''}" data-qid="${qid}" data-val="${i}">${i}</button>`
+        ).join('')}
+      </div>
+    </div>`;
+  } else if (q.t === 'cb') {
+    const vals = resp[qid] || [];
+    const chips = q.opts.map(opt => {
+      const cid = `cb-${qid}-${opt.replace(/\W/g,'_')}`;
+      return `<label class="chip">
+        <input type="checkbox" id="${cid}" data-qid="${qid}" data-opt="${esc(opt)}"${vals.includes(opt)?' checked':''}${q.max?` data-max="${q.max}"`:''}>
+        <span class="chip-lbl">${esc(opt)}</span>
+      </label>`;
+    }).join('');
+    inner = (q.hint ? `<div class="q-hint">${q.hint}</div>` : '') +
+            `<div class="chip-group">${chips}</div>` +
+            (q.max ? `<div class="chip-limit" id="lim-${qid}">${vals.length}/${q.max} selected</div>` : '');
+  } else if (q.t === 'mp') {
+    const vals = resp[qid] || {};
+    inner = `<div class="mp">` + q.parts.map(p =>
+      `<div class="mp-row">
+        <label>${p.label}</label>
+        <textarea data-qid="${qid}" data-part="${p.key}" placeholder="Your answer…">${esc(vals[p.key]||'')}</textarea>
+      </div>`
+    ).join('') + '</div>';
+  }
+
+  return `<div class="question${answered?' answered':''}" id="qb-${qid}">
+    <div class="q-head">
+      <span class="q-num">${q.n}</span>
+      <span class="q-text">${q.label}</span>
+    </div>
+    ${q.hint && q.t !== 'cb' ? `<div class="q-hint">${q.hint}</div>` : ''}
+    ${inner}
+  </div>`;
+}
+
+/* ─── ANSWERED CHECK ─────────────────────────────────────────────────── */
+function isAnswered(id) {
+  const v = resp[id];
+  if (v === undefined || v === null) return false;
+  if (id === 'brand_name') return typeof v === 'string' && v.trim().length > 0;
+  const q = Q[id];
+  if (!q) return false;
+  if (q.t === 'ta') return typeof v === 'string' && v.trim().length > 0;
+  if (q.t === 'sc') return typeof v === 'number' && v >= 1;
+  if (q.t === 'cb') return Array.isArray(v) && v.length > 0;
+  if (q.t === 'mp') return typeof v === 'object' && Object.values(v).some(x => x && x.trim());
+  return false;
+}
+
+function refreshBlock(qid) {
+  const el = document.getElementById(`qb-${qid}`);
+  if (el) el.classList.toggle('answered', isAnswered(qid));
+}
+
+/* ─── PROGRESS ───────────────────────────────────────────────────────── */
+function updateProgress() {
+  const ids = ['brand_name', ...Object.keys(Q)];
+  const done = ids.filter(id => isAnswered(id)).length;
+  document.getElementById('prog-label').textContent = `${done}/${TOTAL} answered`;
+  document.getElementById('prog-fill').style.width = `${(done/TOTAL)*100}%`;
+}
+
+/* ─── SAVE ───────────────────────────────────────────────────────────── */
+function scheduleSave(id) {
+  saveQueue.add(id);
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const ids = [...saveQueue]; saveQueue.clear();
+    try {
+      for (const i of ids) await dbPut(i, resp[i]);
+      const b = document.getElementById('save-badge');
+      b.classList.add('show');
+      setTimeout(() => b.classList.remove('show'), 2000);
+    } catch(e) { console.error('Save failed', e); }
+  }, 600);
+}
+
+/* ─── EVENT WIRING ───────────────────────────────────────────────────── */
+function attachAll() {
+  // Textareas
+  document.querySelectorAll('textarea[data-qid]').forEach(el => {
+    autoResize(el);
+    el.addEventListener('input', () => {
+      const {qid, part} = el.dataset;
+      if (part) {
+        if (!resp[qid] || typeof resp[qid] !== 'object') resp[qid] = {};
+        resp[qid][part] = el.value;
+      } else {
+        resp[qid] = el.value;
+      }
+      autoResize(el);
+      scheduleSave(qid);
+      refreshBlock(qid);
+      updateProgress();
+    });
+  });
+
+  // Scale buttons
+  document.querySelectorAll('.scale-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const {qid, val} = btn.dataset;
+      resp[qid] = parseInt(val);
+      document.querySelectorAll(`.scale-btn[data-qid="${qid}"]`).forEach(b =>
+        b.classList.toggle('sel', b.dataset.val == val)
+      );
+      scheduleSave(qid);
+      refreshBlock(qid);
+      updateProgress();
+    });
+  });
+
+  // Checkboxes
+  document.querySelectorAll('input[type=checkbox][data-qid]').forEach(el => {
+    el.addEventListener('change', () => {
+      const {qid, opt} = el.dataset;
+      const max = el.dataset.max ? parseInt(el.dataset.max) : null;
+      if (!Array.isArray(resp[qid])) resp[qid] = [];
+      if (el.checked) {
+        if (max && resp[qid].length >= max) { el.checked = false; return; }
+        if (!resp[qid].includes(opt)) resp[qid].push(opt);
+      } else {
+        resp[qid] = resp[qid].filter(v => v !== opt);
+      }
+      if (max) {
+        const lim = document.getElementById(`lim-${qid}`);
+        if (lim) lim.textContent = `${resp[qid].length}/${max} selected`;
+      }
+      scheduleSave(qid);
+      refreshBlock(qid);
+      updateProgress();
+    });
+  });
+
+  // Brand name
+  const bn = document.getElementById('q-brand_name');
+  if (bn) {
+    bn.addEventListener('input', () => {
+      resp['brand_name'] = bn.value;
+      scheduleSave('brand_name');
+      updateProgress();
+    });
+  }
+}
+
+/* ─── EXPORT ─────────────────────────────────────────────────────────── */
+function exportJSON() {
+  const out = { brand_name: { question:'Brand Name', answer: resp['brand_name']||null } };
+  Object.keys(Q).forEach(id => {
+    out[id] = { question: Q[id].label, answer: resp[id]||null };
+  });
+  dl(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}), 'brand-questionnaire.json');
+}
+
+function exportText() {
+  let t = 'BRAND PERSONALITY QUESTIONNAIRE\nDesign Garage — Brand Positioning & Personality Discovery\n' + '='.repeat(58) + '\n\n';
+  t += `Brand Name: ${resp['brand_name']||'(not answered)'}\n`;
+  SECTIONS.forEach(s => {
+    t += `\n${'─'.repeat(58)}\nSECTION ${s.num}: ${s.title.toUpperCase()}\n${'─'.repeat(58)}\n\n`;
+    s.qs.forEach(qid => {
+      const q = Q[qid]; if(!q) return;
+      const v = resp[qid];
+      t += `${q.n}. ${q.label}\n`;
+      if (q.t === 'mp' && q.parts) {
+        q.parts.forEach(p => { t += `   ${p.label}: ${v&&v[p.key]||'(not answered)'}\n`; });
+      } else if (q.t === 'cb') {
+        t += `   ${v&&v.length ? v.join(', ') : '(not answered)'}\n`;
+      } else if (q.t === 'sc') {
+        t += `   Score: ${v||'(not answered)'}/7\n`;
+      } else {
+        t += `   ${v||'(not answered)'}\n`;
+      }
+      t += '\n';
+    });
+  });
+  dl(new Blob([t],{type:'text/plain'}), 'brand-questionnaire.txt');
+}
+
+function dl(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+async function clearAll() {
+  if (!confirm('Clear all responses? This cannot be undone.')) return;
+  await dbClear();
+  resp = {};
+  buildSections();
+  attachAll();
+  document.getElementById('q-brand_name').value = '';
+  updateProgress();
+}
+
+/* ─── INIT ───────────────────────────────────────────────────────────── */
+async function init() {
+  await openDB();
+  const rows = await dbGetAll();
+  rows.forEach(r => { resp[r.id] = r.value; });
+  buildSections();
+  buildSidebar();
+  attachAll();
+  // Restore brand name
+  const bn = document.getElementById('q-brand_name');
+  if (bn && resp['brand_name']) bn.value = resp['brand_name'];
+  updateProgress();
+}
+
+init();
+</script>
+</body>
+</html>
