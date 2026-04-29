@@ -349,7 +349,7 @@ function disconnectToken() {
   ghToken = ''; fileSha = null;
   localStorage.removeItem(GH_TOKEN_KEY);
   resp = {};
-  buildSections(); attachAll();
+  buildSections(); buildSidebar(); attachAll();
   document.getElementById('q-brand_name').value = '';
   updateProgress();
   renderSetupBanner();
@@ -623,7 +623,10 @@ function dl(blob, name) {
 /* ─── IMPORT ─────────────────────────────────────────────────────────── */
 function tick() { return new Promise(r => setTimeout(r, 40)); }
 
+let importHideTimer = null;
+
 function showImportProgress(pct, msg, state) {
+  clearTimeout(importHideTimer);
   const box  = document.getElementById('import-progress');
   const fill = document.getElementById('import-bar-fill');
   const st   = document.getElementById('import-status');
@@ -634,7 +637,7 @@ function showImportProgress(pct, msg, state) {
                  (state === 'error') ? `<span>✕ ${msg}</span>` :
                  `<div class="spinner-sm"></div><span>${msg}</span>`;
   if (state === 'done' || state === 'error') {
-    setTimeout(() => { box.style.display = 'none'; fill.style.width = '0'; }, 3500);
+    importHideTimer = setTimeout(() => { box.style.display = 'none'; fill.style.width = '0'; }, 3500);
   }
 }
 
