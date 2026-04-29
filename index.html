@@ -638,24 +638,39 @@ function showImportProgress(pct, msg, state) {
   }
 }
 
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = ev => resolve(ev.target.result);
+    reader.onerror = ()  => reject(new Error('Could not read file'));
+    reader.readAsText(file, 'utf-8');
+  });
+}
+
 async function handleImport(e) {
   const file = e.target.files[0];
-  e.target.value = '';
-  if (!file) return;
+  if (!file) { e.target.value = ''; return; }
 
-  if (!confirm(`Import from "${file.name}"?\nThis will replace all current responses.`)) return;
-
+  // Read the file FIRST — resetting the input before reading can invalidate
+  // the File reference in some browsers, causing a silent failure
   showImportProgress(15, 'Reading file…');
-  await tick();
-
   let text;
   try {
-    text = await file.text();
+    text = await readFileAsText(file);
   } catch(err) {
-    showImportProgress(100, 'Could not read file: ' + err.message, 'error'); return;
+    e.target.value = '';
+    showImportProgress(100, err.message, 'error');
+    console.error('[Import] read error:', err);
+    return;
+  }
+  e.target.value = ''; // safe to reset now that we have the text
+
+  if (!confirm(`Import from "${file.name}"?\nThis will replace all current responses.`)) {
+    document.getElementById('import-progress').style.display = 'none';
+    return;
   }
 
-  showImportProgress(40, 'Parsing…');
+  showImportProgress(45, 'Parsing…');
   await tick();
 
   let newResp;
@@ -664,10 +679,26 @@ async function handleImport(e) {
       ? parseImportJSON(text)
       : parseImportTXT(text);
   } catch(err) {
-    showImportProgress(100, 'Could not parse file: ' + err.message, 'error'); return;
+    showImportProgress(100, 'Parse error: ' + err.message, 'error');
+    console.error('[Import] parse error:', err);
+    return;
   }
 
-  showImportProgress(75, 'Populating form…');
+  const count = Object.keys(newResp).filter(k => {
+    const v = newResp[k];
+    if (v == null) return false;
+    if (Array.isArray(v)) return v.length > 0;
+    if (typeof v === 'object') return Object.values(v).some(x => x);
+    return String(v).trim().length > 0;
+  }).length;
+
+  if (count === 0) {
+    showImportProgress(100, 'No responses found — check the file format', 'error');
+    console.error('[Import] parsed 0 fields from file');
+    return;
+  }
+
+  showImportProgress(75, `Populating ${count} fields…`);
   await tick();
 
   resp = newResp;
@@ -677,14 +708,6 @@ async function handleImport(e) {
   const bn = document.getElementById('q-brand_name');
   if (bn) bn.value = resp['brand_name'] || '';
   updateProgress();
-
-  const count = Object.keys(newResp).filter(k => {
-    const v = newResp[k];
-    if (v == null) return false;
-    if (Array.isArray(v)) return v.length > 0;
-    if (typeof v === 'object') return Object.values(v).some(x => x);
-    return String(v).trim().length > 0;
-  }).length;
 
   showImportProgress(100, `${count} of ${TOTAL} fields imported`, 'done');
   scheduleSave();
