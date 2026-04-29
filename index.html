@@ -715,7 +715,17 @@ async function handleImport(e) {
   updateProgress();
 
   showImportProgress(100, `${count} of ${TOTAL} fields imported`, 'done');
-  scheduleSave();
+
+  if (ghToken) {
+    setSaveStatus('saving');
+    try {
+      await ghSave(resp);
+      setSaveStatus('saved');
+    } catch(e) {
+      console.error('[Import] save error:', e);
+      setSaveStatus('error');
+    }
+  }
 }
 
 function parseImportJSON(text) {
