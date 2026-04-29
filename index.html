@@ -109,6 +109,23 @@ textarea:focus{outline:none;border-color:var(--border-focus)}
 .btn-danger{background:transparent;color:#c0392b;border-color:#f5c6cb}
 .btn-danger:hover{background:#fdf0ef}
 
+/* SETUP BANNER */
+.setup-banner{background:#2a2a2a;color:#fff;padding:11px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px;border-bottom:1px solid #3a3a3a}
+.setup-banner.hidden{display:none}
+.setup-banner strong{font-weight:600;white-space:nowrap}
+.setup-desc{color:rgba(255,255,255,.55);flex:1;min-width:160px}
+.setup-input{width:240px;padding:6px 11px;border-radius:5px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-family:inherit;font-size:13px;outline:none;transition:border-color .15s}
+.setup-input:focus{border-color:rgba(255,255,255,.5)}
+.setup-input::placeholder{color:rgba(255,255,255,.3);font-size:12px}
+.btn-connect{padding:6px 16px;border-radius:5px;background:#fff;color:#1A1A1A;border:none;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-connect:hover{opacity:.88}
+.connected-row{display:flex;align-items:center;gap:10px;flex:1}
+.connected-dot{width:7px;height:7px;border-radius:50%;background:#4caf50;flex-shrink:0}
+.connected-label{font-size:13px;color:rgba(255,255,255,.8)}
+.connected-label code{font-size:12px;background:rgba(255,255,255,.1);padding:1px 6px;border-radius:3px;color:#fff}
+.btn-disconnect{font-size:12px;color:rgba(255,255,255,.4);background:none;border:none;cursor:pointer;padding:0;font-family:inherit}
+.btn-disconnect:hover{color:rgba(255,255,255,.85)}
+
 @media(max-width:900px){
   .sidebar{display:none}
   .main{margin-left:0;padding:32px 24px 60px}
@@ -134,6 +151,8 @@ textarea:focus{outline:none;border-color:var(--border-focus)}
   <div class="save-status" id="save-status"></div>
 </div>
 
+<div class="setup-banner hidden" id="setup-banner"></div>
+
 <div class="layout">
   <nav class="sidebar" id="sidebar"></nav>
   <main class="main">
@@ -151,7 +170,7 @@ textarea:focus{outline:none;border-color:var(--border-focus)}
 
     <div class="export-box">
       <h3>Export Responses</h3>
-      <p>All answers are stored locally in your browser's IndexedDB database. Download a copy anytime.</p>
+      <p>Responses are saved to <code>responses.json</code> in the GitHub repository. Download a formatted copy anytime.</p>
       <div class="btn-row">
         <button class="btn btn-dark" onclick="exportJSON()">↓ Export JSON</button>
         <button class="btn btn-outline" onclick="exportText()">↓ Export Text</button>
@@ -242,49 +261,83 @@ const TOTAL = 54; // brand_name + q1..q53
 /* ─── STATE ─────────────────────────────────────────────────────────── */
 let resp = {};
 let saveTimer = null;
-let saveQueue = new Set();
 
-/* ─── INDEXEDDB ─────────────────────────────────────────────────────── */
-const DB_NAME = 'dg_brand_q', DB_VER = 1, STORE = 'responses';
-let db;
+/* ─── GITHUB API ─────────────────────────────────────────────────────── */
+const GH_OWNER     = 'moazamijaz-ops';
+const GH_REPO      = 'branding-questionnaire';
+const GH_FILE      = 'responses.json';
+const GH_TOKEN_KEY = 'dg_gh_token';
 
-function openDB() {
-  return new Promise((res, rej) => {
-    const r = indexedDB.open(DB_NAME, DB_VER);
-    r.onupgradeneeded = e => {
-      const d = e.target.result;
-      if (!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE, {keyPath:'id'});
-    };
-    r.onsuccess = e => { db = e.target.result; res(); };
-    r.onerror   = e => rej(e.target.error);
-  });
+let ghToken = localStorage.getItem(GH_TOKEN_KEY) || '';
+let fileSha = null;
+
+function ghHeaders() {
+  return { 'Authorization': `token ${ghToken}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+}
+function toB64(str) { return btoa(unescape(encodeURIComponent(str))); }
+function fromB64(str) { return decodeURIComponent(escape(atob(str.replace(/\n/g,'')))); }
+
+async function ghLoad() {
+  const r = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, { headers: ghHeaders() });
+  if (r.status === 404) return {};
+  if (!r.ok) throw new Error(`GitHub ${r.status}: ${(await r.json()).message}`);
+  const d = await r.json();
+  fileSha = d.sha;
+  return JSON.parse(fromB64(d.content));
 }
 
-function dbPut(id, value) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(STORE,'readwrite');
-    tx.objectStore(STORE).put({id, value, ts: Date.now()});
-    tx.oncomplete = res;
-    tx.onerror = e => rej(e.target.error);
-  });
+async function ghSave(data) {
+  if (!ghToken) return;
+  const body = {
+    message: `Update questionnaire responses — ${new Date().toISOString()}`,
+    content: toB64(JSON.stringify(data, null, 2)),
+    ...(fileSha ? { sha: fileSha } : {})
+  };
+  const r = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`,
+    { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(`GitHub ${r.status}: ${(await r.json()).message}`);
+  fileSha = (await r.json()).content.sha;
 }
 
-function dbGetAll() {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(STORE,'readonly');
-    const r = tx.objectStore(STORE).getAll();
-    r.onsuccess = () => res(r.result);
-    r.onerror   = e => rej(e.target.error);
-  });
+/* ─── TOKEN SETUP ────────────────────────────────────────────────────── */
+function renderSetupBanner() {
+  const banner = document.getElementById('setup-banner');
+  banner.classList.remove('hidden');
+  if (!ghToken) {
+    banner.innerHTML = `
+      <strong>Connect to GitHub</strong>
+      <span class="setup-desc">Enter a Personal Access Token with <code style="font-size:11px;opacity:.9">repo</code> scope to save responses to this repository.</span>
+      <input class="setup-input" id="gh-token-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxx" autocomplete="off">
+      <button class="btn-connect" onclick="connectToken()">Connect</button>`;
+    document.getElementById('gh-token-input').addEventListener('keydown', e => { if (e.key==='Enter') connectToken(); });
+  } else {
+    banner.innerHTML = `
+      <div class="connected-row">
+        <span class="connected-dot"></span>
+        <span class="connected-label">Saving to <code>${GH_OWNER}/${GH_REPO}/responses.json</code></span>
+      </div>
+      <button class="btn-disconnect" onclick="disconnectToken()">Disconnect</button>`;
+  }
 }
 
-function dbClear() {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(STORE,'readwrite');
-    tx.objectStore(STORE).clear();
-    tx.oncomplete = res;
-    tx.onerror = e => rej(e.target.error);
-  });
+async function connectToken() {
+  const val = (document.getElementById('gh-token-input')?.value || '').trim();
+  if (!val) return;
+  ghToken = val;
+  localStorage.setItem(GH_TOKEN_KEY, val);
+  renderSetupBanner();
+  await loadAndRender();
+}
+
+function disconnectToken() {
+  if (!confirm('Disconnect GitHub? Your responses will no longer be accessible until you reconnect.')) return;
+  ghToken = ''; fileSha = null;
+  localStorage.removeItem(GH_TOKEN_KEY);
+  resp = {};
+  buildSections(); attachAll();
+  document.getElementById('q-brand_name').value = '';
+  updateProgress();
+  renderSetupBanner();
 }
 
 /* ─── HELPERS ────────────────────────────────────────────────────────── */
@@ -429,20 +482,19 @@ function setSaveStatus(state) {
   }
 }
 
-function scheduleSave(id) {
-  saveQueue.add(id);
+function scheduleSave() {
+  if (!ghToken) return;
   setSaveStatus('saving');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    const ids = [...saveQueue]; saveQueue.clear();
     try {
-      for (const i of ids) await dbPut(i, resp[i]);
+      await ghSave(resp);
       setSaveStatus('saved');
     } catch(e) {
       console.error('Save failed', e);
       setSaveStatus('error');
     }
-  }, 600);
+  }, 1500);
 }
 
 /* ─── EVENT WIRING ───────────────────────────────────────────────────── */
@@ -459,7 +511,7 @@ function attachAll() {
         resp[qid] = el.value;
       }
       autoResize(el);
-      scheduleSave(qid);
+      scheduleSave();
       refreshBlock(qid);
       updateProgress();
     });
@@ -473,7 +525,7 @@ function attachAll() {
       document.querySelectorAll(`.scale-btn[data-qid="${qid}"]`).forEach(b =>
         b.classList.toggle('sel', b.dataset.val == val)
       );
-      scheduleSave(qid);
+      scheduleSave();
       refreshBlock(qid);
       updateProgress();
     });
@@ -495,7 +547,7 @@ function attachAll() {
         const lim = document.getElementById(`lim-${qid}`);
         if (lim) lim.textContent = `${resp[qid].length}/${max} selected`;
       }
-      scheduleSave(qid);
+      scheduleSave();
       refreshBlock(qid);
       updateProgress();
     });
@@ -506,7 +558,7 @@ function attachAll() {
   if (bn) {
     bn.addEventListener('input', () => {
       resp['brand_name'] = bn.value;
-      scheduleSave('brand_name');
+      scheduleSave();
       updateProgress();
     });
   }
@@ -554,26 +606,44 @@ function dl(blob, name) {
 
 async function clearAll() {
   if (!confirm('Clear all responses? This cannot be undone.')) return;
-  await dbClear();
   resp = {};
-  buildSections();
-  attachAll();
+  try { await ghSave(resp); } catch(e) { console.error(e); }
+  buildSections(); attachAll();
   document.getElementById('q-brand_name').value = '';
   updateProgress();
 }
 
 /* ─── INIT ───────────────────────────────────────────────────────────── */
+async function loadAndRender() {
+  if (!ghToken) return;
+  setSaveStatus('saving');
+  document.getElementById('save-status').innerHTML = '<div class="spinner"></div>Loading…';
+  try {
+    const data = await ghLoad();
+    if (data) resp = data;
+    buildSections(); attachAll();
+    const bn = document.getElementById('q-brand_name');
+    if (bn && resp['brand_name']) bn.value = resp['brand_name'];
+    updateProgress();
+    setSaveStatus('saved');
+    document.getElementById('save-status').innerHTML = '✓&nbsp;Loaded';
+    savedTimer = setTimeout(() => { document.getElementById('save-status').classList.remove('show'); }, 2500);
+  } catch(e) {
+    console.error('Load failed', e);
+    setSaveStatus('error');
+    document.getElementById('save-status').innerHTML = '✕&nbsp;Load failed — check your token';
+  }
+}
+
 async function init() {
-  await openDB();
-  const rows = await dbGetAll();
-  rows.forEach(r => { resp[r.id] = r.value; });
   buildSections();
   buildSidebar();
-  attachAll();
-  // Restore brand name
-  const bn = document.getElementById('q-brand_name');
-  if (bn && resp['brand_name']) bn.value = resp['brand_name'];
-  updateProgress();
+  renderSetupBanner();
+  await loadAndRender();
+  if (!ghToken) {
+    attachAll();
+    updateProgress();
+  }
 }
 
 init();
