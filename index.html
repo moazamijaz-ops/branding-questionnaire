@@ -169,13 +169,15 @@ textarea:focus{outline:none;border-color:var(--border-focus)}
     <div id="sections-root"></div>
 
     <div class="export-box">
-      <h3>Export Responses</h3>
-      <p>Responses are saved to <code>responses.json</code> in the GitHub repository. Download a formatted copy anytime.</p>
+      <h3>Export / Import</h3>
+      <p>Responses are saved to <code>responses.json</code> in the GitHub repository. Import a previously exported JSON or TXT file to pre-fill the form.</p>
       <div class="btn-row">
         <button class="btn btn-dark" onclick="exportJSON()">↓ Export JSON</button>
         <button class="btn btn-outline" onclick="exportText()">↓ Export Text</button>
+        <button class="btn btn-outline" onclick="document.getElementById('import-input').click()">↑ Import File</button>
         <button class="btn btn-danger" onclick="clearAll()">Clear All Responses</button>
       </div>
+      <input type="file" id="import-input" accept=".json,.txt" style="display:none" onchange="handleImport(event)">
     </div>
   </main>
 </div>
@@ -602,6 +604,120 @@ function dl(blob, name) {
   const a = document.createElement('a');
   a.href = url; a.download = name; a.click();
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+/* ─── IMPORT ─────────────────────────────────────────────────────────── */
+async function handleImport(e) {
+  const file = e.target.files[0];
+  e.target.value = ''; // reset so same file can be re-imported
+  if (!file) return;
+  const text = await file.text();
+  try {
+    if (file.name.toLowerCase().endsWith('.json')) {
+      importJSON(text);
+    } else {
+      importTXT(text);
+    }
+  } catch(err) {
+    alert('Could not parse file: ' + err.message);
+  }
+}
+
+function importJSON(text) {
+  const data = JSON.parse(text);
+  const newResp = {};
+  for (const [key, val] of Object.entries(data)) {
+    if (val === null || val === undefined) continue;
+    // Exported JSON format wraps each answer: { question: '...', answer: ... }
+    // Raw responses.json format stores values directly
+    if (typeof val === 'object' && !Array.isArray(val) && 'answer' in val) {
+      if (val.answer !== null && val.answer !== undefined) newResp[key] = val.answer;
+    } else {
+      newResp[key] = val;
+    }
+  }
+  applyResponses(newResp);
+}
+
+function importTXT(text) {
+  const lines = text.split('\n');
+  const newResp = {};
+
+  // Build Q-number → qid lookup
+  const numToQid = {};
+  Object.entries(Q).forEach(([qid, q]) => { if (q.n) numToQid[q.n] = qid; });
+
+  // Brand name
+  for (const line of lines) {
+    const m = line.match(/^Brand Name: (.*)/);
+    if (m) { const v = m[1].trim(); if (v && v !== '(not answered)') newResp['brand_name'] = v; break; }
+  }
+
+  let currentQid = null;
+  let answerLines  = [];
+
+  function finalise() {
+    if (!currentQid) return;
+    const q = Q[currentQid];
+    if (!q) { currentQid = null; answerLines = []; return; }
+
+    // Drop trailing blank lines
+    while (answerLines.length && !answerLines[answerLines.length - 1].trim()) answerLines.pop();
+
+    const first = answerLines[0] || '';
+
+    if (q.t === 'sc') {
+      const m = first.match(/Score: (\d+)\/7/);
+      if (m) newResp[currentQid] = parseInt(m[1]);
+    } else if (q.t === 'cb') {
+      if (first && first !== '(not answered)') {
+        newResp[currentQid] = first.split(', ').map(s => s.trim()).filter(Boolean);
+      }
+    } else if (q.t === 'mp') {
+      const obj = {};
+      for (const line of answerLines) {
+        for (const part of q.parts) {
+          if (line.startsWith(part.label + ': ')) {
+            const v = line.slice(part.label.length + 2).trim();
+            if (v && v !== '(not answered)') obj[part.key] = v;
+          }
+        }
+      }
+      if (Object.keys(obj).length) newResp[currentQid] = obj;
+    } else {
+      const answer = answerLines.filter(l => l !== '(not answered)').join('\n').trim();
+      if (answer) newResp[currentQid] = answer;
+    }
+
+    currentQid = null;
+    answerLines = [];
+  }
+
+  for (const line of lines) {
+    // New question header
+    const qm = line.match(/^(Q\d+)\. /);
+    if (qm) { finalise(); currentQid = numToQid[qm[1]] || null; answerLines = []; continue; }
+    // Section dividers — end current question
+    if (line.match(/^[─=]{4}/) || line.match(/^SECTION \d+:/)) { finalise(); continue; }
+    // Collect answer content (strip 3-space indent if present)
+    if (currentQid) {
+      answerLines.push(line.startsWith('   ') ? line.slice(3) : line);
+    }
+  }
+  finalise();
+
+  applyResponses(newResp);
+}
+
+function applyResponses(newResp) {
+  if (!confirm(`Import will overwrite ${Object.keys(newResp).length} fields. Continue?`)) return;
+  resp = newResp;
+  buildSections();
+  attachAll();
+  const bn = document.getElementById('q-brand_name');
+  if (bn) bn.value = resp['brand_name'] || '';
+  updateProgress();
+  scheduleSave();
 }
 
 async function clearAll() {
