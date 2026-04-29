@@ -501,7 +501,7 @@ function setSaveStatus(state, msg) {
 }
 
 function scheduleSave() {
-  if (!ghToken) return;
+  if (!ghToken) { setSaveStatus('error', 'Not saved — connect a GitHub token to save'); return; }
   setSaveStatus('saving');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
@@ -714,17 +714,21 @@ async function handleImport(e) {
   if (bn) bn.value = resp['brand_name'] || '';
   updateProgress();
 
-  showImportProgress(100, `${count} of ${TOTAL} fields imported`, 'done');
+  if (!ghToken) {
+    showImportProgress(100, `${count} fields applied — connect a GitHub token to save permanently`, 'error');
+    return;
+  }
 
-  if (ghToken) {
-    setSaveStatus('saving');
-    try {
-      await ghSave(resp);
-      setSaveStatus('saved');
-    } catch(e) {
-      console.error('[Import] save error:', e);
-      setSaveStatus('error');
-    }
+  showImportProgress(100, `${count} of ${TOTAL} fields imported, saving…`, 'done');
+  setSaveStatus('saving');
+  try {
+    await ghSave(resp);
+    showImportProgress(100, `${count} of ${TOTAL} fields imported and saved`, 'done');
+    setSaveStatus('saved');
+  } catch(e) {
+    console.error('[Import] save error:', e);
+    showImportProgress(100, 'Import applied but save failed — check your token', 'error');
+    setSaveStatus('error');
   }
 }
 
