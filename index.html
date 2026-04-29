@@ -287,7 +287,9 @@ let ghToken = localStorage.getItem(GH_TOKEN_KEY) || '';
 let fileSha = null;
 
 function ghHeaders() {
-  return { 'Authorization': `token ${ghToken}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+  const h = { 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+  if (ghToken) h['Authorization'] = `token ${ghToken}`;
+  return h;
 }
 function toB64(str) { return btoa(unescape(encodeURIComponent(str))); }
 function fromB64(str) { return decodeURIComponent(escape(atob(str.replace(/\n/g,'')))); }
@@ -803,8 +805,7 @@ async function clearAll() {
 
 /* ─── INIT ───────────────────────────────────────────────────────────── */
 async function loadAndRender() {
-  if (!ghToken) return;
-  setSaveStatus('loading', 'Connecting…');
+  setSaveStatus('loading', 'Loading…');
   try {
     const data = await ghLoad();
     if (data) resp = data;
@@ -817,24 +818,16 @@ async function loadAndRender() {
     setSaveStatus('saved', 'Loaded');
   } catch(e) {
     console.error('Load failed', e);
-    setSaveStatus('error', 'Load failed — check your token');
-    // Build the form anyway so the page is usable
+    setSaveStatus('error', 'Load failed');
     buildSections(); buildSidebar(); attachAll(); updateProgress();
   }
 }
 
 async function init() {
   renderSetupBanner();
-  if (ghToken) {
-    document.getElementById('sections-root').innerHTML =
-      '<div style="padding:80px 0;text-align:center;color:var(--muted);font-size:13px">Loading responses…</div>';
-    await loadAndRender();
-  } else {
-    buildSections();
-    buildSidebar();
-    attachAll();
-    updateProgress();
-  }
+  document.getElementById('sections-root').innerHTML =
+    '<div style="padding:80px 0;text-align:center;color:var(--muted);font-size:13px">Loading responses…</div>';
+  await loadAndRender();
 }
 
 init();
